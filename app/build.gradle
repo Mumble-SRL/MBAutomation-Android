@@ -1,0 +1,54 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'com.jfrog.bintray'
+
+ext {
+    bintrayRepo = 'MBurger-Android'
+    bintrayName = 'mbautomation'
+
+    publishedGroupId = 'mumble.mburger'
+    libraryName = 'MBAutomationLib'
+    artifact = 'mbautomation-android'
+
+    libraryDescription = 'Android library in Kotlin for automation system'
+
+    siteUrl = 'https://github.com/Mumble-SRL/MBAutomation-Android'
+    gitUrl = 'https://github.com/Mumble-SRL/MBAutomation-Android.git'
+
+    libraryVersion = '0.1.0'
+
+    developerId = 'MBurger-Android'
+    developerName = 'Mumble'
+    developerEmail = 'giacomo.torricelli@mumbleideas.it'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
+
+android {
+    compileSdkVersion 29
+
+    defaultConfig {
+        minSdkVersion 17
+        targetSdkVersion 29
+        versionCode 9
+        versionName "0.1.0"
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation('mumble.mburger:android_kt:0.5.11') {
+        transitive = false
+    }
+
+    implementation('mumble.mburger:mbmessages-android:0.4.10') {
+        transitive = false
+    }
+}
+
+apply from: 'https://raw.githubusercontent.com/Mumble-SRL/JCenter/master/script.gradle'
