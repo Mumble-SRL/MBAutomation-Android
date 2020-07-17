@@ -157,6 +157,7 @@ class MBAutomationParserConverter {
                     }
 
                     if (jTrigger != null) {
+                        jTrigger.put("solved", trigger.solved)
                         jTriggers.put(jTrigger)
                     }
                 }
