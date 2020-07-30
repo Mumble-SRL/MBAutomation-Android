@@ -82,7 +82,7 @@ class MBAutomationDBHelper(var context: Context) : SQLiteOpenHelper(context, DAT
 
     fun getSingleMessage(cursor: Cursor): MBMessageWithTriggers {
         val jContent = cursor.getString(1)
-        return MBAutomationParserConverter.deJSONIZEMessages(JSONObject(jContent))
+        return MBAutomationParserConverter.deJSONIZEMessages(JSONObject(unescapeString(jContent)))
     }
 
     fun updateAMessage(db: SQLiteDatabase, id: Long, message_content: String) {
@@ -95,5 +95,12 @@ class MBAutomationDBHelper(var context: Context) : SQLiteOpenHelper(context, DAT
         val db = this.writableDatabase
         db.delete(TABLE_MESSAGES, "$COLUMN_MESSAGE_ID = $id", null)
         db.close()
+    }
+
+    fun unescapeString(string: String): String {
+        var sb = StringBuilder(string)
+        sb = sb.deleteCharAt(0)
+        sb = sb.deleteCharAt(sb.length - 1)
+        return sb.toString().replace("''".toRegex(), "'")
     }
 }

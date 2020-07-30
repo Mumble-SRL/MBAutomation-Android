@@ -60,14 +60,14 @@ class MBAutomationParserConverter {
         fun jsonizeContentIAM(mbIAM: MBMessageIAM): JSONObject {
             val jString = JSONObject()
             jString.put("id", mbIAM.id)
-            jString.put("type", mbIAM.id)
-            jString.put("title", mbIAM.id)
-            jString.put("content", mbIAM.id)
-            jString.put("title_color", mbIAM.id)
-            jString.put("content_color", mbIAM.id)
-            jString.put("backgroundColor", mbIAM.id)
-            jString.put("closeButtonColor", mbIAM.id)
-            jString.put("closeButtonBGColor", mbIAM.id)
+            jString.put("type", mbIAM.type)
+            jString.put("title", mbIAM.title)
+            jString.put("content", mbIAM.content)
+            jString.put("title_color", mbIAM.title_color)
+            jString.put("content_color", mbIAM.content_color)
+            jString.put("backgroundColor", mbIAM.backgroundColor)
+            jString.put("closeButtonColor", mbIAM.closeButtonColor)
+            jString.put("closeButtonBGColor", mbIAM.closeButtonBGColor)
             jString.put("cta1", jsonizeCTA(mbIAM.cta1))
             jString.put("cta2", jsonizeCTA(mbIAM.cta2))
             jString.put("durationInSeconds", mbIAM.durationInSeconds)
@@ -157,6 +157,7 @@ class MBAutomationParserConverter {
                     }
 
                     if (jTrigger != null) {
+                        jTrigger.put("type", trigger.type)
                         jTrigger.put("solved", trigger.solved)
                         jTriggers.put(jTrigger)
                     }
@@ -170,19 +171,19 @@ class MBAutomationParserConverter {
         }
 
         fun deJSONIZEMessages(jsonObject: JSONObject): MBMessageWithTriggers {
-            val id = MBCommonMethods.getJSONField(jsonObject, "id") as Long
-            val message_id = MBCommonMethods.getJSONField(jsonObject, "message_id") as Long
+            val id = jsonObject.getLong("id")
+            val message_id = jsonObject.getLong("message_id")
             val message_title = MBCommonMethods.getJSONField(jsonObject, "message_title") as String?
             val message_description = MBCommonMethods.getJSONField(jsonObject, "message_description") as String?
             val message_type = MBCommonMethods.getJSONField(jsonObject, "message_type") as String?
             val message_send_after_days = MBCommonMethods.getJSONField(jsonObject, "message_send_after_days") as Int
             val message_repeat = MBCommonMethods.getJSONField(jsonObject, "message_repeat") as Int
-            val message_starts_at = MBCommonMethods.getJSONField(jsonObject, "message_starts_at") as Long
-            val message_ends_at = MBCommonMethods.getJSONField(jsonObject, "message_ends_at") as Long
+            val message_starts_at = jsonObject.getLong("message_starts_at")
+            val message_ends_at = jsonObject.getLong("message_ends_at")
             val message_automation = MBCommonMethods.getJSONField(jsonObject, "message_automation") as Int
             val message_sTriggers = MBCommonMethods.getJSONField(jsonObject, "message_sTriggers") as String?
-            val message_created_at = MBCommonMethods.getJSONField(jsonObject, "message_created_at") as Long
-            val message_updated_at = MBCommonMethods.getJSONField(jsonObject, "message_updated_at") as Long
+            val message_created_at = jsonObject.getLong("message_created_at")
+            val message_updated_at = jsonObject.getLong("message_updated_at")
             val jContent = MBCommonMethods.getJSONField(jsonObject, "message_content") as JSONObject
 
             val content = when (message_type) {
@@ -194,11 +195,10 @@ class MBAutomationParserConverter {
                     message_repeat, message_starts_at, message_ends_at, message_automation, message_sTriggers, message_created_at,
                     message_updated_at, content)
 
-            val message_triggers = MBCommonMethods.getJSONField(jsonObject, "message_triggers") as String?
+            val message_triggers = MBCommonMethods.getJSONField(jsonObject, "message_triggers") as JSONObject?
 
             if (message_triggers != null) {
-                val jTriggers = JSONObject(message_triggers)
-                return MBMessageWithTriggers(id, message, parseTriggers(jTriggers))
+                return MBMessageWithTriggers(id, message, parseTriggers(message_triggers))
             } else {
                 return MBMessageWithTriggers(id, message, null)
             }
@@ -212,13 +212,13 @@ class MBAutomationParserConverter {
             val sent = MBCommonMethods.getJSONField(jContent, "sent") as Int
             val topics = MBCommonMethods.getJSONField(jContent, "topics") as String?
             val total = MBCommonMethods.getJSONField(jContent, "total") as Int
-            val created_at = MBCommonMethods.getJSONField(jContent, "created_at") as Long
-            val updated_at = MBCommonMethods.getJSONField(jContent, "updated_at") as Long
+            val created_at = jContent.getLong("created_at")
+            val updated_at = jContent.getLong("updated_at")
             return MBMessagePush(id, title, body, date, sent, topics, total, created_at, updated_at)
         }
 
         fun deJsonizeIAM(jContent: JSONObject): MBMessageIAM {
-            val id = MBCommonMethods.getJSONField(jContent, "id") as Long
+            val id = jContent.getLong("id")
             val type = MBCommonMethods.getJSONField(jContent, "type") as String
             val title = MBCommonMethods.getJSONField(jContent, "title") as String?
             val content = MBCommonMethods.getJSONField(jContent, "content") as String?
@@ -229,9 +229,9 @@ class MBAutomationParserConverter {
             val closeButtonBGColor = MBCommonMethods.getJSONField(jContent, "closeButtonBGColor") as Int?
             val cta1 = deJsonizeCTA(MBCommonMethods.getJSONField(jContent, "cta1") as JSONObject?)
             val cta2 = deJsonizeCTA(MBCommonMethods.getJSONField(jContent, "cta2") as JSONObject?)
-            val durationInSeconds = MBCommonMethods.getJSONField(jContent, "id") as Int
-            val expiresAt = MBCommonMethods.getJSONField(jContent, "id") as Long?
-            val image = MBCommonMethods.getJSONField(jContent, "id") as String?
+            val durationInSeconds = MBCommonMethods.getJSONField(jContent, "durationInSeconds") as Int
+            val expiresAt = jContent.getLong("expiresAt")
+            val image = MBCommonMethods.getJSONField(jContent, "image") as String?
 
             return MBMessageIAM(id, type, title, content, title_color, content_color, backgroundColor, closeButtonColor, closeButtonBGColor,
                     cta1, cta2, durationInSeconds, expiresAt, image)

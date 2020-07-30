@@ -17,7 +17,7 @@ ext {
     siteUrl = 'https://github.com/Mumble-SRL/MBAutomation-Android'
     gitUrl = 'https://github.com/Mumble-SRL/MBAutomation-Android.git'
 
-    libraryVersion = '0.1.0'
+    libraryVersion = '0.1.8'
 
     developerId = 'MBurger-Android'
     developerName = 'Mumble'
@@ -34,8 +34,8 @@ android {
     defaultConfig {
         minSdkVersion 17
         targetSdkVersion 29
-        versionCode 9
-        versionName "0.1.0"
+        versionCode 17
+        versionName "0.1.8"
     }
 }
 
@@ -46,7 +46,11 @@ dependencies {
         transitive = false
     }
 
-    implementation('mumble.mburger:mbmessages-android:0.4.10') {
+    implementation('mumble.mburger:mbmessages-android:0.4.14') {
+        transitive = false
+    }
+
+    implementation('mumble.mburger:mbaudience-android:0.3.0') {
         transitive = false
     }
 }

@@ -5,20 +5,20 @@ import android.app.Application
 import android.content.Context
 import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
+import mumble.mburger.mbaudience.MBAudience
+import mumble.mburger.mbaudience.MBAudienceLocationAdded
+import mumble.mburger.mbaudience.MBAudienceTagChanged
 import mumble.mburger.mbautomation.MBAutomationComponents.MBAutomationCommon
 import mumble.mburger.mbautomation.MBAutomationData.MBMessageWithTriggers
 import mumble.mburger.mbmessages.MBMessages
 import mumble.mburger.mbmessages.iam.MBIAMData.MBMessage
 import mumble.mburger.mbmessages.iam.MBMessagesManager
-import mumble.mburger.mbmessages.triggers.MBTriggerAppOpening
-import mumble.mburger.mbmessages.triggers.MBTriggerEvent
-import mumble.mburger.mbmessages.triggers.MBTriggerView
-import mumble.mburger.mbmessages.triggers.TriggerMethod
+import mumble.mburger.mbmessages.triggers.*
 import mumble.mburger.sdk.kt.MBPlugins.MBPlugin
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin() {
+class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.ActivityLifecycleCallbacks, MBPlugin() {
 
     override var id: String? = "MBAutomation"
     override var order: Int = -1
@@ -36,6 +36,9 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin() {
     override fun doStart(activity: FragmentActivity) {
         super.doStart(activity)
         MBMessages.isAutomationConnected = true
+        MBAudience.isAutomationConnected = true
+        MBAudience.audienceTagChangedListener = this
+        MBAudience.locationAddedListener = this
     }
 
     override fun messagesReceived(messages: ArrayList<*>?, fromStart: Boolean) {
@@ -242,5 +245,42 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin() {
                 }
             }
         }
+    }
+
+    override fun onMBAudienceTagChanged(tag: String, value: String) {
+        val helper = MBAutomationDBHelper(context)
+        val automationMessages = helper.getMessages()
+        for (message in automationMessages) {
+            if (message.triggers != null) {
+                val triggers = message.triggers
+                for (trigger in triggers!!.triggers) {
+                    if (trigger is MBTriggerTagChange) {
+                        if(trigger.tag == tag){
+                            when(trigger.operator){
+                                TagChangeOperator.EQUALS ->{
+                                    if(trigger.value == value){
+                                        trigger.solved = true
+                                    }
+                                }
+
+                                TagChangeOperator.NOT_EQUAL ->{
+                                    if(trigger.value != value){
+                                        trigger.solved = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
+            }
+        }
+
+        checkForTriggers(context)
+    }
+
+    override fun onMBLocationAdded(latitude: Double, longitude: Double) {
+        TODO("Not yet implemented")
     }
 }
