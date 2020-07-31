@@ -7,6 +7,7 @@ import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import mumble.mburger.mbautomation.MBAutomationData.MBMessageWithTriggers
+import mumble.mburger.mbmessages.triggers.MBMessageTriggers
 import org.json.JSONObject
 
 val DATABASE_VERSION = 1
@@ -42,11 +43,34 @@ class MBAutomationDBHelper(var context: Context) : SQLiteOpenHelper(context, DAT
         return true
     }
 
-    fun addAMessage(id: Long, campaign_content: String) {
+    fun addAMessage(id: Long, ms: MBMessageTriggers?, campaign_content: String) {
         val db = this.writableDatabase
         val values = ContentValues()
         if (dataIsAlreadyIn(db, id)) {
-            //TODO updateAMessage(db, id, campaign_content)
+            val localMess = getAMessage(id)
+            if (localMess != null) {
+                if ((localMess.triggers != null) && (ms != null)) {
+                    var oneDifferent = false
+                    for (trigger in localMess.triggers!!.triggers) {
+                        for (localTrigger in ms.triggers) {
+                            if (trigger.type == localTrigger.type) {
+                                if (trigger.id != localTrigger.id) {
+                                    oneDifferent = true
+                                    break
+                                }
+                            }
+                        }
+                    }
+
+                    if (oneDifferent) {
+                        updateAMessage(db, id, campaign_content)
+                    }
+                } else {
+                    updateAMessage(db, id, campaign_content)
+                }
+            } else {
+                updateAMessage(db, id, campaign_content)
+            }
         } else {
             values.put(COLUMN_MESSAGE_ID, id)
             values.put(COLUMN_MESSAGE_CONTENT, DatabaseUtils.sqlEscapeString(campaign_content))
@@ -78,6 +102,22 @@ class MBAutomationDBHelper(var context: Context) : SQLiteOpenHelper(context, DAT
         cursor.close()
         db.close()
         return campaigns
+    }
+
+    fun getAMessage(id: Long): MBMessageWithTriggers? {
+        var message: MBMessageWithTriggers? = null
+        val query = "SELECT * FROM $TABLE_MESSAGES WHERE $COLUMN_MESSAGE_ID = $id"
+        val db = this.writableDatabase
+        val cursor = db.rawQuery(query, null)
+        if (cursor.moveToFirst()) {
+            do {
+                message = getSingleMessage(cursor)
+            } while (cursor.moveToNext())
+        }
+
+        cursor.close()
+        db.close()
+        return message
     }
 
     fun getSingleMessage(cursor: Cursor): MBMessageWithTriggers {

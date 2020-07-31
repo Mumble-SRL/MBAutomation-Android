@@ -376,6 +376,10 @@ class MBAutomationParserConverter {
                     trigger.history = deJsonizeHistory(jTr.getString("history"))
                 }
 
+                if (MBCommonMethods.isJSONOk(jTr, "id")) {
+                    trigger.id = jTr.getLong("id")
+                }
+
                 triggers.add(trigger)
             }
 
