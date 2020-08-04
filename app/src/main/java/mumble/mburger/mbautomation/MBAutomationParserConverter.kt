@@ -380,6 +380,10 @@ class MBAutomationParserConverter {
                     trigger.id = jTr.getLong("id")
                 }
 
+                if (MBCommonMethods.isJSONOk(jTr, "solved")) {
+                    trigger.solved = jTr.getBoolean("solved")
+                }
+
                 triggers.add(trigger)
             }
 

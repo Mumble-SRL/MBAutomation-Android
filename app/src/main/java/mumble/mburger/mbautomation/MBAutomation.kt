@@ -54,7 +54,6 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
             tempMessages.add(MBMessageWithTriggers(ms.id, ms, MBAutomationParserConverter.parseTriggers(jTriggers)))
         }
 
-
         val helper = MBAutomationDBHelper(context)
         for (ms in tempMessages) {
             helper.addAMessage(ms.id, ms.triggers, MBAutomationParserConverter.convertMessageToJSON(ms))
@@ -63,6 +62,8 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         if (initialized && fromStart) {
             checkForTriggers(context)
         }
+
+        startedCheckAndAdd()
     }
 
     override fun locationDataUpdated(latitude: Double, longitude: Double) {
@@ -80,66 +81,65 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
             curActivity = activity
         }
 
+        if (MBAutomationCommon.isLauncherActivity(activity)) {
+            startedCheckAndAdd()
+        }
+    }
+
+    internal fun startedCheckAndAdd(){
         val helper = MBAutomationDBHelper(context)
         val automationMessages = helper.getMessages()
-        if (MBAutomationCommon.isLauncherActivity(activity)) {
-            var atLeastOneUpdate = false
-            for (message in automationMessages) {
-                if (message.triggers != null) {
-                    val triggers = message.triggers
-                    for (trigger in triggers!!.triggers) {
-                        if (trigger is MBTriggerAppOpening) {
-                            atLeastOneUpdate = true
-                            trigger.history.add(System.currentTimeMillis())
-                            if (trigger.history.size == trigger.times) {
-                                trigger.solved = true
-                            }
-                            break
-                        }
-
-                        if (trigger is MBTriggerInactiveUser) {
-                            /**Check for inactive user**/
-                            val latestEnter = MBCommonMethods.getSharedPreferences(context)?.getLong(PROPERTY_LATEST_IN, -1L)
-                            if (latestEnter != null) {
-                                if (latestEnter != -1L) {
-                                    val diff = System.currentTimeMillis() - latestEnter
-                                    val days = TimeUnit.MILLISECONDS.toDays(diff)
-                                    if (days >= trigger.days) {
-                                        atLeastOneUpdate = true
-                                        trigger.history.add(System.currentTimeMillis())
-                                        trigger.solved = true
-                                    }
-                                }
-                            }
-
-                            break
-                        }
-
-                        if(trigger is MBTriggerLocation){
-                            if(trigger.semi_solved){
-                                val enter_time = trigger.history[0]
-                                val diff = System.currentTimeMillis() - enter_time
-                                val diffDays = TimeUnit.MILLISECONDS.toDays(diff)
-                                if(trigger.after >= diffDays){
-                                    atLeastOneUpdate = true
-                                    trigger.solved = true
-                                }
-                            }
-
-                            break
+        var atLeastOneUpdate = false
+        for (message in automationMessages) {
+            if (message.triggers != null) {
+                val triggers = message.triggers
+                for (trigger in triggers!!.triggers) {
+                    if (trigger is MBTriggerAppOpening) {
+                        atLeastOneUpdate = true
+                        trigger.history.add(System.currentTimeMillis())
+                        if (trigger.history.size == trigger.times) {
+                            trigger.solved = true
                         }
                     }
 
-                    helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
+                    if (trigger is MBTriggerInactiveUser) {
+                        /**Check for inactive user**/
+                        val latestEnter = MBCommonMethods.getSharedPreferences(context)?.getLong(PROPERTY_LATEST_IN, -1L)
+                        if (latestEnter != null) {
+                            if (latestEnter != -1L) {
+                                val diff = System.currentTimeMillis() - latestEnter
+                                val days = TimeUnit.MILLISECONDS.toDays(diff)
+                                if (days >= trigger.days) {
+                                    atLeastOneUpdate = true
+                                    trigger.history.add(System.currentTimeMillis())
+                                    trigger.solved = true
+                                }
+                            }
+                        }
+                    }
+
+                    if(trigger is MBTriggerLocation){
+                        if(trigger.semi_solved){
+                            val enter_time = trigger.history[0]
+                            val diff = System.currentTimeMillis() - enter_time
+                            val diffDays = TimeUnit.MILLISECONDS.toDays(diff)
+                            if(trigger.after >= diffDays){
+                                atLeastOneUpdate = true
+                                trigger.solved = true
+                            }
+                        }
+                    }
                 }
             }
 
-            if (atLeastOneUpdate) {
-                checkForTriggers(context)
-            }
-
-            MBCommonMethods.getSharedPreferencesEditor(context)?.putLong(PROPERTY_LATEST_IN, System.currentTimeMillis())?.apply()
+            helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
         }
+
+        if (atLeastOneUpdate) {
+            checkForTriggers(context)
+        }
+
+        MBCommonMethods.getSharedPreferencesEditor(context)?.putLong(PROPERTY_LATEST_IN, System.currentTimeMillis())?.apply()
     }
 
     var startTime: Long = -1L
@@ -165,6 +165,8 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                 }
             }
         }
+
+        checkForTriggers(activity)
     }
 
     override fun onActivityStopped(activity: Activity) {
