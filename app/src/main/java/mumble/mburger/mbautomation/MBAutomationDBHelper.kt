@@ -13,7 +13,7 @@ import org.json.JSONObject
 val DATABASE_VERSION = 1
 val DATABASE_NAME = "iam.db"
 
-class MBAutomationDBHelper(var context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class MBAutomationDBHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     val TABLE_MESSAGES = "MESSAGES"
     val COLUMN_MESSAGE_ID = "id"

@@ -5,12 +5,14 @@ import android.app.Application
 import android.content.Context
 import android.location.Location
 import android.os.Bundle
+import android.os.Handler
 import androidx.fragment.app.FragmentActivity
 import mumble.mburger.mbaudience.MBAudience
 import mumble.mburger.mbaudience.MBAudienceLocationAdded
 import mumble.mburger.mbaudience.MBAudienceTagChanged
 import mumble.mburger.mbautomation.MBAutomationComponents.MBAutomationCommon
 import mumble.mburger.mbautomation.MBAutomationData.MBMessageWithTriggers
+import mumble.mburger.mbautomation.MBAutomationData.MBTriggers.MBUserEvent
 import mumble.mburger.mbmessages.MBMessages
 import mumble.mburger.mbmessages.iam.MBIAMData.MBMessage
 import mumble.mburger.mbmessages.iam.MBMessagesManager
@@ -64,6 +66,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         }
 
         startedCheckAndAdd()
+        startEventsAutomation(context)
     }
 
     override fun locationDataUpdated(latitude: Double, longitude: Double) {
@@ -86,7 +89,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         }
     }
 
-    internal fun startedCheckAndAdd(){
+    internal fun startedCheckAndAdd() {
         val helper = MBAutomationDBHelper(context)
         val automationMessages = helper.getMessages()
         var atLeastOneUpdate = false
@@ -118,12 +121,12 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                         }
                     }
 
-                    if(trigger is MBTriggerLocation){
-                        if(trigger.semi_solved){
+                    if (trigger is MBTriggerLocation) {
+                        if (trigger.semi_solved) {
                             val enter_time = trigger.history[0]
                             val diff = System.currentTimeMillis() - enter_time
                             val diffDays = TimeUnit.MILLISECONDS.toDays(diff)
-                            if(trigger.after >= diffDays){
+                            if (trigger.after >= diffDays) {
                                 atLeastOneUpdate = true
                                 trigger.solved = true
                             }
@@ -222,10 +225,35 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
     override fun onActivityResumed(activity: Activity) {}
 
     companion object {
+        var mHandler: Handler? = null
+        var sendDataRunnable: Runnable? = null
+
         var curActivity: FragmentActivity? = null
 
+        var eventsTimerTime = 10
+
+        fun startEventsAutomation(context: Context) {
+            mHandler = Handler()
+            sendDataRunnable = Runnable {
+                getEventsAndSend(context)
+                mHandler?.postDelayed(sendDataRunnable, TimeUnit.SECONDS.toMillis(eventsTimerTime.toLong()))
+            }
+
+            sendDataRunnable?.run()
+        }
+
+        fun stopAutomation(context: Context) {
+            mHandler?.removeCallbacks(sendDataRunnable)
+            val helper = MBAutomationEventsDBHelper(context)
+            val events: ArrayList<MBUserEvent> = helper.allEvents
+            if (events.isNotEmpty()) {
+                helper.setSending(events)
+                MBAsyncTask_sendEvents(context, events).execute()
+            }
+        }
+
         /**TRIGGER - Add an event**/
-        fun addEvent(context: Context, event_name: String) {
+        fun addEvent(context: Context, event_name: String, metadata: String? = null) {
             val helper = MBAutomationDBHelper(context)
             val automationMessages = helper.getMessages()
             var atLeastOneUpdate = false
@@ -250,6 +278,9 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                     helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
                 }
             }
+
+            val event = MBAutomationEventsDBHelper(context)
+            event.addEvent(event_name, metadata, false)
 
             if (atLeastOneUpdate) {
                 checkForTriggers(context)
@@ -316,6 +347,15 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                         }
                     }
                 }
+            }
+        }
+
+        fun getEventsAndSend(context: Context) {
+            val helper = MBAutomationEventsDBHelper(context)
+            val events: ArrayList<MBUserEvent> = helper.allEvents
+            if (events.isNotEmpty()) {
+                helper.setSending(events)
+                MBAsyncTask_sendEvents(context, events).execute()
             }
         }
     }
