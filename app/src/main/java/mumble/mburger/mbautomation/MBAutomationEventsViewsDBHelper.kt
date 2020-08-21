@@ -10,7 +10,7 @@ import mumble.mburger.mbautomation.MBAutomationData.MBUserView
 import java.util.*
 
 val EVENTS_DATABASE_VERSION = 1
-val EVENTS_DATABASE_NAME = "iam.db"
+val EVENTS_DATABASE_NAME = "eventview.db"
 
 internal class MBAutomationEventsDBHelper(context: Context?) : SQLiteOpenHelper(context, EVENTS_DATABASE_NAME, null, EVENTS_DATABASE_VERSION) {
 

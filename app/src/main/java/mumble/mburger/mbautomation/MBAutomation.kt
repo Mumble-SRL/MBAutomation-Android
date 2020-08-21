@@ -90,7 +90,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         }
     }
 
-    internal fun startedCheckAndAdd() {
+    private fun startedCheckAndAdd() {
         val helper = MBAutomationDBHelper(context)
         val automationMessages = helper.getMessages()
         var atLeastOneUpdate = false
