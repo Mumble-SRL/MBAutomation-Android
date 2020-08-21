@@ -102,9 +102,19 @@ Here's the list of triggers managed by automation SDK:
 
 You can send events with the `MBAutomation` like this:
 
+```kotlin
+MBAutomation.sendEvent(context, "event")
 ```
-MBAutomation.addEvent(context, "event")
+
+You can specify 2 more parameters, both optional: `name` a name that will be displayed in the MBurger dashboard and a dictionary of additional `metadata` to specifymore fields of the event
+
+```kotlin
+MBAutomation.sendEvent(context, "event",
+                      	name : String? = "name",
+                      	metadata: String? = "metadata")
 ```
+
+Events are saved in a local database and sent to the server every 10 seconds, you can change the frequency setting the `eventsTimerTime` property.
 
 
 
@@ -113,3 +123,5 @@ MBAutomation.addEvent(context, "event")
 In MBAutomation the tracking of the views is automatic by using [Application.ActivityLifecycleCallbacks](https://developer.android.com/reference/android/app/Application.ActivityLifecycleCallbacks) to track view automatically on `onActivityCreated`, `onActivityStarted`, `onActivityStopped` and `onActivityDestroyed`.
 
 The default name for all the Activities is the class name (e.g. if your Activity is called Act_home you will see Act_home as the view). If you want to change the name for an Activity you can change its internal name by setting a title on the Manifest or calling `setTitle` on the onCreate.
+
+As the events, views are saved in a local database and sent to the server every 10 seconds and you can change the frequency setting the `eventsTimerTime` property.

@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.os.AsyncTask
 import mumble.mburger.mbautomation.MBAutomationData.MBUserEvent
+import mumble.mburger.mbautomation.MBAutomationData.MBUserView
 import mumble.mburger.sdk.kt.Common.MBApiManager.MBApiManagerConfig
 import mumble.mburger.sdk.kt.Common.MBApiManager.MBApiManagerUtils
 import mumble.mburger.sdk.kt.Common.MBCommonMethods
@@ -15,7 +16,7 @@ import java.lang.ref.WeakReference
  * @author Enrico Ori
  * @version {@value MBIAMConstants#version}
  */
-internal class MBAsyncTask_sendEvents(context: Context, var events: ArrayList<MBUserEvent>) : AsyncTask<Void, Void, Void>() {
+internal class MBAsyncTask_sendViews(context: Context, var views: ArrayList<MBUserView>) : AsyncTask<Void, Void, Void>() {
 
     private var weakContext: WeakReference<Context> = WeakReference(context)
 
@@ -46,9 +47,9 @@ internal class MBAsyncTask_sendEvents(context: Context, var events: ArrayList<MB
     override fun onPostExecute(postResult: Void?) {
         val helper = MBAutomationEventsDBHelper(weakContext.get())
         if (result == MBApiManagerConfig.RESULT_OK) {
-            helper.deleteEvents(events)
+            helper.deleteViews(views)
         } else {
-            helper.removeSending(events)
+            helper.removeSendingViews(views)
         }
     }
 
