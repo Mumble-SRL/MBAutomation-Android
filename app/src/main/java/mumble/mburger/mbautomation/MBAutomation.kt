@@ -425,5 +425,41 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                 MBAsyncTask_sendViews(context, views).execute()
             }
         }
+
+        fun trackScreenView(user_activity: FragmentActivity, time: Long = -1L) {
+            val helper = MBAutomationDBHelper(user_activity.applicationContext)
+            val automationMessages = helper.getMessages()
+            var atLeastOneUpdate = false
+
+            for (message in automationMessages) {
+                if (message.triggers != null) {
+                    val triggers = message.triggers
+                    for (trigger in triggers!!.triggers) {
+                        if (trigger is MBTriggerView) {
+                            if (trigger.view_name == user_activity.title.toString()) {
+                                trigger.history.add(time)
+                                var totalTime = 0L
+                                for (h in trigger.history) {
+                                    totalTime += h
+                                }
+
+                                if ((totalTime >= trigger.seconds_on_view) && (trigger.history.size == trigger.times)) {
+                                    trigger.solved = true
+                                }
+
+                                val eventHelper = MBAutomationEventsDBHelper(user_activity.applicationContext)
+                                eventHelper.addView(user_activity.title.toString(), false)
+
+                                atLeastOneUpdate = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (atLeastOneUpdate) {
+                checkForTriggers(user_activity.applicationContext)
+            }
+        }
     }
 }

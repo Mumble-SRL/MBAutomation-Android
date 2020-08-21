@@ -120,8 +120,14 @@ Events are saved in a local database and sent to the server every 10 seconds, yo
 
 # View Tracking
 
-In MBAutomation the tracking of the views is automatic by using [Application.ActivityLifecycleCallbacks](https://developer.android.com/reference/android/app/Application.ActivityLifecycleCallbacks) to track view automatically on `onActivityCreated`, `onActivityStarted`, `onActivityStopped` and `onActivityDestroyed`.
+In MBAutomation the tracking of the views is automatic by using [Application.ActivityLifecycleCallbacks](https://developer.android.com/reference/android/app/Application.ActivityLifecycleCallbacks) to track view automatically on `onActivityCreated`, `onActivityStarted`, `onActivityStopped` and `onActivityDestroyed`. You can disable it changing the static value `trackViewsAutomatically` to false.
 
 The default name for all the Activities is the class name (e.g. if your Activity is called Act_home you will see Act_home as the view). If you want to change the name for an Activity you can change its internal name by setting a title on the Manifest or calling `setTitle` on the onCreate.
+
+If you have disabled the automatic tracking and you still want to track the views you can use this function, passing a `FragmentActivity` and, optionally, how much time the Activity has been seen:
+
+```kotlin
+MBAutomation.trackScreenView(this, time: Long = -1L)
+```
 
 As the events, views are saved in a local database and sent to the server every 10 seconds and you can change the frequency setting the `eventsTimerTime` property.
