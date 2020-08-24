@@ -35,7 +35,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
     override var error: String? = null
     override var initialized: Boolean = false
 
-    internal val PROPERTY_LATEST_IN = "latest_in"
+    private val PROPERTY_LATEST_IN = "latest_in"
 
     override fun init(context: Context) {
         super.init(context)
