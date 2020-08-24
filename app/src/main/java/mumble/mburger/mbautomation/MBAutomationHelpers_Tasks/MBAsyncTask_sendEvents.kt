@@ -1,14 +1,18 @@
-package mumble.mburger.mbautomation
+package mumble.mburger.mbautomation.MBAutomationHelpers_Tasks
 
 import android.content.ContentValues
 import android.content.Context
 import android.os.AsyncTask
+import mumble.mburger.mbautomation.MBAutomationComponents.MBAutomationAPIConstants
 import mumble.mburger.mbautomation.MBAutomationData.MBUserEvent
-import mumble.mburger.mbautomation.MBAutomationData.MBUserView
+import mumble.mburger.sdk.kt.Common.MBApiManager.MBAPIManager4
 import mumble.mburger.sdk.kt.Common.MBApiManager.MBApiManagerConfig
 import mumble.mburger.sdk.kt.Common.MBApiManager.MBApiManagerUtils
 import mumble.mburger.sdk.kt.Common.MBCommonMethods
+import org.json.JSONArray
+import org.json.JSONObject
 import java.lang.ref.WeakReference
+import java.util.concurrent.TimeUnit
 
 /**
  * Task that sends events to the server
@@ -16,7 +20,7 @@ import java.lang.ref.WeakReference
  * @author Enrico Ori
  * @version {@value MBIAMConstants#version}
  */
-internal class MBAsyncTask_sendViews(context: Context, var views: ArrayList<MBUserView>) : AsyncTask<Void, Void, Void>() {
+internal class MBAsyncTask_sendEvents(context: Context, var events: ArrayList<MBUserEvent>) : AsyncTask<Void, Void, Void>() {
 
     private var weakContext: WeakReference<Context> = WeakReference(context)
 
@@ -47,14 +51,34 @@ internal class MBAsyncTask_sendViews(context: Context, var views: ArrayList<MBUs
     override fun onPostExecute(postResult: Void?) {
         val helper = MBAutomationEventsDBHelper(weakContext.get())
         if (result == MBApiManagerConfig.RESULT_OK) {
-            helper.deleteViews(views)
+            helper.deleteEvents(events)
         } else {
-            helper.removeSendingViews(views)
+            helper.removeSendingEvents(events)
         }
     }
 
     fun putValuesAndCall() {
         val values = ContentValues()
-        //TODO
+        values.put("events", getJsonEvents())
+        map = MBAPIManager4.callApi(weakContext.get()!!, MBAutomationAPIConstants.API_SEND_EVENTS, values,
+                MBApiManagerConfig.MODE_POST, false, false)
+    }
+
+    fun getJsonEvents(): String {
+        val jArr = JSONArray()
+        for (ev in events) {
+            val jEvent = JSONObject()
+            jEvent.put("event", ev.event)
+            jEvent.put("timestamp", TimeUnit.MILLISECONDS.toSeconds(ev.timestamp))
+            if (ev.event_name != null) {
+                jEvent.put("name", ev.event_name)
+            }
+            if (ev.metadata != null) {
+                jEvent.put("metadata", ev.metadata)
+            }
+            jArr.put(jEvent)
+        }
+
+        return jArr.toString()
     }
 }

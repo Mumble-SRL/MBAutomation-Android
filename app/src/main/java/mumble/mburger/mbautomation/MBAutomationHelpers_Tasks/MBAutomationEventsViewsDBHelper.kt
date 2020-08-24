@@ -1,4 +1,4 @@
-package mumble.mburger.mbautomation
+package mumble.mburger.mbautomation.MBAutomationHelpers_Tasks
 
 import android.content.ContentValues
 import android.content.Context
@@ -27,6 +27,7 @@ internal class MBAutomationEventsDBHelper(context: Context?) : SQLiteOpenHelper(
     val COLUMN_VIEW_ID = "_id"
     val COLUMN_VIEW = "event"
     val COLUMN_VIEW_TIMESTAMP = "timestamp"
+    val COLUMN_VIEW_METADATA = "metadata"
     val COLUMN_VIEW_SENDING = "sending"
 
     val DATABASE_CREATE_MBUSER_EVENTS = "CREATE TABLE " + TABLE_MBUSER_EVENTS + " ( " +
@@ -41,6 +42,7 @@ internal class MBAutomationEventsDBHelper(context: Context?) : SQLiteOpenHelper(
             COLUMN_VIEW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
             COLUMN_VIEW + " TEXT, " +
             COLUMN_VIEW_TIMESTAMP + " LONG, " +
+            COLUMN_VIEW_METADATA + " TEXT, " +
             COLUMN_VIEW_SENDING + " INTEGER)"
 
     override fun onCreate(database: SQLiteDatabase) {
@@ -187,13 +189,14 @@ internal class MBAutomationEventsDBHelper(context: Context?) : SQLiteOpenHelper(
         val id = cursor.getInt(0)
         val view = cursor.getString(1)
         val timestamp = cursor.getLong(2)
-        val sending = cursor.getInt(3) == 1
-        return MBUserView(id, view, timestamp, sending)
+        val metadata = cursor.getString(3)
+        val sending = cursor.getInt(4) == 1
+        return MBUserView(id, view, timestamp, metadata, sending)
     }
 
-    fun addView(name:String, sending: Boolean) {
+    fun addView(name:String, metadata: String?, sending: Boolean) {
         val db = this.writableDatabase
-        val values = createContentValuesMBUserView(name, sending)
+        val values = createContentValuesMBUserView(name, metadata, sending)
         db.insert(TABLE_MBUSER_VIEWS, null, values)
         db.close()
     }
@@ -212,9 +215,10 @@ internal class MBAutomationEventsDBHelper(context: Context?) : SQLiteOpenHelper(
         db.close()
     }
 
-    private fun createContentValuesMBUserView(name: String, sending: Boolean): ContentValues {
+    private fun createContentValuesMBUserView(name: String, metadata: String?, sending: Boolean): ContentValues {
         val values = ContentValues()
         values.put(COLUMN_VIEW, name)
+        values.put(COLUMN_VIEW_METADATA, metadata)
         values.put(COLUMN_VIEW_TIMESTAMP, System.currentTimeMillis())
         if (sending) {
             values.put(COLUMN_VIEW_SENDING, 1)

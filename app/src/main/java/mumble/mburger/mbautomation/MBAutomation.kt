@@ -14,6 +14,10 @@ import mumble.mburger.mbautomation.MBAutomationComponents.MBAutomationCommon
 import mumble.mburger.mbautomation.MBAutomationData.MBMessageWithTriggers
 import mumble.mburger.mbautomation.MBAutomationData.MBUserEvent
 import mumble.mburger.mbautomation.MBAutomationData.MBUserView
+import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAsyncTask_sendEvents
+import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAsyncTask_sendViews
+import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAutomationDBHelper
+import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAutomationEventsDBHelper
 import mumble.mburger.mbmessages.MBMessages
 import mumble.mburger.mbmessages.iam.MBIAMData.MBMessage
 import mumble.mburger.mbmessages.iam.MBMessagesManager
@@ -67,7 +71,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         }
 
         startedCheckAndAdd()
-        startEventsAutomation(context)
+        startEventsAndViewsAutomation(context)
     }
 
     override fun locationDataUpdated(latitude: Double, longitude: Double) {
@@ -199,7 +203,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                                     }
 
                                     val eventHelper = MBAutomationEventsDBHelper(context)
-                                    eventHelper.addView(localTitle!!, false)
+                                    eventHelper.addView(localTitle!!, null, false)
 
                                     atLeastOneUpdate = true
                                 }
@@ -207,6 +211,8 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                         }
                     }
                 }
+
+                helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
             }
 
             localTitle = null
@@ -287,10 +293,10 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         //TRACK VIEWS AUTOMATICALLY
         var trackViewsAutomatically = true
 
-        fun startEventsAutomation(context: Context) {
+        fun startEventsAndViewsAutomation(context: Context) {
             mHandler = Handler()
             sendDataRunnable = Runnable {
-                getEventsAndSend(context)
+                getEventsViewsAndSend(context)
                 mHandler?.postDelayed(sendDataRunnable, TimeUnit.SECONDS.toMillis(eventsTimerTime.toLong()))
             }
 
@@ -298,7 +304,10 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         }
 
         fun stopAutomation(context: Context) {
-            mHandler?.removeCallbacks(sendDataRunnable)
+            if(sendDataRunnable != null) {
+                mHandler?.removeCallbacks(sendDataRunnable!!)
+            }
+
             val helper = MBAutomationEventsDBHelper(context)
             val events: ArrayList<MBUserEvent> = helper.allEvents
             if (events.isNotEmpty()) {
@@ -411,7 +420,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
             }
         }
 
-        fun getEventsAndSend(context: Context) {
+        fun getEventsViewsAndSend(context: Context) {
             val helper = MBAutomationEventsDBHelper(context)
             val events: ArrayList<MBUserEvent> = helper.allEvents
             if (events.isNotEmpty()) {
@@ -426,7 +435,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
             }
         }
 
-        fun trackScreenView(user_activity: FragmentActivity, time: Long = -1L) {
+        fun trackScreenView(user_activity: FragmentActivity, metadata: String?, time: Long = -1L) {
             val helper = MBAutomationDBHelper(user_activity.applicationContext)
             val automationMessages = helper.getMessages()
             var atLeastOneUpdate = false
@@ -448,13 +457,15 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                                 }
 
                                 val eventHelper = MBAutomationEventsDBHelper(user_activity.applicationContext)
-                                eventHelper.addView(user_activity.title.toString(), false)
+                                eventHelper.addView(user_activity.title.toString(), metadata, false)
 
                                 atLeastOneUpdate = true
                             }
                         }
                     }
                 }
+
+                helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
             }
 
             if (atLeastOneUpdate) {

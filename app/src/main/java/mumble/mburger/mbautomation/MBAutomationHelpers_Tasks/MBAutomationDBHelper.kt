@@ -1,4 +1,4 @@
-package mumble.mburger.mbautomation
+package mumble.mburger.mbautomation.MBAutomationHelpers_Tasks
 
 import android.content.ContentValues
 import android.content.Context
@@ -7,6 +7,7 @@ import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import mumble.mburger.mbautomation.MBAutomationData.MBMessageWithTriggers
+import mumble.mburger.mbautomation.MBAutomationParserConverter
 import mumble.mburger.mbmessages.triggers.MBMessageTriggers
 import org.json.JSONObject
 
