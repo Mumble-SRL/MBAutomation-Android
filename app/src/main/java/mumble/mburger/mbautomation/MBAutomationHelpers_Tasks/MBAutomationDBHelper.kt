@@ -1,4 +1,4 @@
-package mumble.mburger.mbautomation
+package mumble.mburger.mbautomation.MBAutomationHelpers_Tasks
 
 import android.content.ContentValues
 import android.content.Context
@@ -7,13 +7,14 @@ import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import mumble.mburger.mbautomation.MBAutomationData.MBMessageWithTriggers
+import mumble.mburger.mbautomation.MBAutomationParserConverter
 import mumble.mburger.mbmessages.triggers.MBMessageTriggers
 import org.json.JSONObject
 
 val DATABASE_VERSION = 1
 val DATABASE_NAME = "iam.db"
 
-class MBAutomationDBHelper(var context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class MBAutomationDBHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     val TABLE_MESSAGES = "MESSAGES"
     val COLUMN_MESSAGE_ID = "id"

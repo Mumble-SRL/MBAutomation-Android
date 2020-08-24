@@ -4,11 +4,13 @@
 
 Using `MBAutomationAndroid` you can setup triggers for in-app messages and push notifications, in the MBurger dashboard and the SDK will show the coontent automatically when triggers are satisfied.
 
-It depends on `MBAutomationAndroid` because messages can be triggered by location changes or tag changes, coming from this SDK.
+It depends on `MBAudienceAndroid` because messages can be triggered by location changes or tag changes, coming from this SDK.
 
-It depends on `MBAutomationAndroid` because it contains all the views for the in-app messages and the checks if a message has been already displayed or not.
+It depends on `MBMessagesAndroid` because it contains all the views for the in-app messages and the checks if a message has been already displayed or not.
 
 The data flow from all the SDKs is manage entirely by MBurger, you don't have to worry about it.
+
+
 
 # Installation
 
@@ -25,7 +27,7 @@ maven { url "https://dl.bintray.com/mumbleideas/MBurger-Android/" }
 Then add **MBurger Kotlin** dependency to your `app build.gradle` file:
 
 ```
-implementation 'mumble.mburger:mbautomation-android:0.2.7'
+implementation 'mumble.mburger:mbautomation-android:0.3.0'
 ```
 
 Lastly add `MBAudience` and `MBMessages` library:
@@ -35,7 +37,7 @@ implementation 'mumble.mburger:mbmessages-android:0.4.15'
 implementation 'mumble.mburger:mbaudience-android:0.3.0'
 ```
 
-### 
+
 
 # Initialization
 
@@ -94,7 +96,7 @@ Here's the list of triggers managed by automation SDK:
 
 #### View
 
-`MBTriggerView`: it's activated when a user enters a view n times (`times` property). If the `seconds_on_view` the user needs to stay the seconds defined in order to activate the trigger.
+`MBTriggerView`: it's activated when a user enters a view n times (`times` property). If the `seconds_on_view` has a value the user needs to stay the seconds defined in order to activate the trigger.
 
 
 
@@ -102,14 +104,50 @@ Here's the list of triggers managed by automation SDK:
 
 You can send events with the `MBAutomation` like this:
 
+```kotlin
+MBAutomation.sendEvent(context, "event")
 ```
-MBAutomation.addEvent(context, "event")
+
+You can specify 2 more parameters, both optional: `name` a name that will be displayed in the MBurger dashboard and a dictionary of additional `metadata` to specifymore fields of the event
+
+```kotlin
+MBAutomation.sendEvent(context, "event",
+                      	name : String? = "name",
+                      	metadata: String? = "metadata")
 ```
+
+Events are saved in a local database and sent to the server every 10 seconds, you can change the frequency setting the `eventsTimerTime` property.
 
 
 
 # View Tracking
 
-In MBAutomation the tracking of the views is automatic by using [Application.ActivityLifecycleCallbacks](https://developer.android.com/reference/android/app/Application.ActivityLifecycleCallbacks) to track view automatically on `onActivityCreated`, `onActivityStarted`, `onActivityStopped` and `onActivityDestroyed`.
+In MBAutomation the tracking of the views is automatic by using [Application.ActivityLifecycleCallbacks](https://developer.android.com/reference/android/app/Application.ActivityLifecycleCallbacks) to track view automatically on `onActivityCreated`, `onActivityStarted`, `onActivityStopped` and `onActivityDestroyed`. You can disable it changing the static value `trackViewsAutomatically` to false.
 
 The default name for all the Activities is the class name (e.g. if your Activity is called Act_home you will see Act_home as the view). If you want to change the name for an Activity you can change its internal name by setting a title on the Manifest or calling `setTitle` on the onCreate.
+
+If you have disabled the automatic tracking and you still want to track the views you can use this function, passing a `FragmentActivity` and, optionally, how much time the Activity has been seen:
+
+```kotlin
+MBAutomation.trackScreenView(this, time: Long = -1L)
+```
+
+As the events, views are saved in a local database and sent to the server every 10 seconds and you can change the frequency setting the `eventsTimerTime` property.
+
+
+
+# Stop/Pause tracking
+
+To property stop view and events tracking you should call 
+
+```kotlin
+MBAutomation.stopAutomation(applicationContext)
+```
+
+We suggest to call it when your app goes on background then restart it with
+
+```
+MBAutomation.startEventsAndViewsAutomation(applicationContext)
+```
+
+when your app returns to foreground.

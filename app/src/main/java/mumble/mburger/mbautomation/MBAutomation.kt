@@ -5,12 +5,19 @@ import android.app.Application
 import android.content.Context
 import android.location.Location
 import android.os.Bundle
+import android.os.Handler
 import androidx.fragment.app.FragmentActivity
 import mumble.mburger.mbaudience.MBAudience
 import mumble.mburger.mbaudience.MBAudienceLocationAdded
 import mumble.mburger.mbaudience.MBAudienceTagChanged
 import mumble.mburger.mbautomation.MBAutomationComponents.MBAutomationCommon
 import mumble.mburger.mbautomation.MBAutomationData.MBMessageWithTriggers
+import mumble.mburger.mbautomation.MBAutomationData.MBUserEvent
+import mumble.mburger.mbautomation.MBAutomationData.MBUserView
+import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAsyncTask_sendEvents
+import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAsyncTask_sendViews
+import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAutomationDBHelper
+import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAutomationEventsDBHelper
 import mumble.mburger.mbmessages.MBMessages
 import mumble.mburger.mbmessages.iam.MBIAMData.MBMessage
 import mumble.mburger.mbmessages.iam.MBMessagesManager
@@ -64,6 +71,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         }
 
         startedCheckAndAdd()
+        startEventsAndViewsAutomation(context)
     }
 
     override fun locationDataUpdated(latitude: Double, longitude: Double) {
@@ -86,7 +94,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         }
     }
 
-    internal fun startedCheckAndAdd(){
+    private fun startedCheckAndAdd() {
         val helper = MBAutomationDBHelper(context)
         val automationMessages = helper.getMessages()
         var atLeastOneUpdate = false
@@ -118,12 +126,12 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                         }
                     }
 
-                    if(trigger is MBTriggerLocation){
-                        if(trigger.semi_solved){
+                    if (trigger is MBTriggerLocation) {
+                        if (trigger.semi_solved) {
                             val enter_time = trigger.history[0]
                             val diff = System.currentTimeMillis() - enter_time
                             val diffDays = TimeUnit.MILLISECONDS.toDays(diff)
-                            if(trigger.after >= diffDays){
+                            if (trigger.after >= diffDays) {
                                 atLeastOneUpdate = true
                                 trigger.solved = true
                             }
@@ -143,76 +151,87 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
     }
 
     var startTime: Long = -1L
-    var localClassName: String? = null
+    var localTitle: String? = null
     override fun onActivityStarted(activity: Activity) {
         /**TRIGGER - View Activity**/
-        if (activity is FragmentActivity) {
-            curActivity = activity
-        }
-
-        val helper = MBAutomationDBHelper(context)
-        val automationMessages = helper.getMessages()
-        for (message in automationMessages) {
-            if (message.triggers != null) {
-                val triggers = message.triggers
-                for (trigger in triggers!!.triggers) {
-                    if (trigger is MBTriggerView) {
-                        if (trigger.view_name == activity.localClassName) {
-                            localClassName = activity.localClassName
-                            startTime = System.currentTimeMillis()
-                        }
-                    }
-                }
+        if (trackViewsAutomatically) {
+            if (activity is FragmentActivity) {
+                curActivity = activity
             }
-        }
 
-        checkForTriggers(activity)
-    }
-
-    override fun onActivityStopped(activity: Activity) {
-        val helper = MBAutomationDBHelper(context)
-        val automationMessages = helper.getMessages()
-        var atLeastOneUpdate = false
-        for (message in automationMessages) {
-            if (message.triggers != null) {
-                val triggers = message.triggers
-                for (trigger in triggers!!.triggers) {
-                    if (trigger is MBTriggerView) {
-                        if (trigger.view_name == activity.localClassName) {
-                            if ((activity.localClassName == localClassName) && (startTime != -1L)) {
-                                val time = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startTime)
-                                trigger.history.add(time)
-                                var totalTime = 0L
-                                for (h in trigger.history) {
-                                    totalTime += h
-                                }
-
-                                if ((totalTime >= trigger.seconds_on_view) && (trigger.history.size == trigger.times)) {
-                                    trigger.solved = true
-                                }
-
-                                atLeastOneUpdate = true
+            val helper = MBAutomationDBHelper(context)
+            val automationMessages = helper.getMessages()
+            for (message in automationMessages) {
+                if (message.triggers != null) {
+                    val triggers = message.triggers
+                    for (trigger in triggers!!.triggers) {
+                        if (trigger is MBTriggerView) {
+                            if (trigger.view_name == activity.title) {
+                                localTitle = activity.title.toString()
+                                startTime = System.currentTimeMillis()
                             }
                         }
                     }
                 }
             }
+
+            checkForTriggers(activity)
         }
+    }
 
-        localClassName = null
-        startTime = -1L
+    override fun onActivityStopped(activity: Activity) {
+        if (trackViewsAutomatically) {
+            val helper = MBAutomationDBHelper(context)
+            val automationMessages = helper.getMessages()
+            var atLeastOneUpdate = false
+            for (message in automationMessages) {
+                if (message.triggers != null) {
+                    val triggers = message.triggers
+                    for (trigger in triggers!!.triggers) {
+                        if (trigger is MBTriggerView) {
+                            if (trigger.view_name == activity.title.toString()) {
+                                if ((activity.title.toString() == localTitle) && (startTime != -1L)) {
+                                    val time = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startTime)
+                                    trigger.history.add(time)
+                                    var totalTime = 0L
+                                    for (h in trigger.history) {
+                                        totalTime += h
+                                    }
 
-        if (atLeastOneUpdate) {
-            checkForTriggers(context)
+                                    if ((totalTime >= trigger.seconds_on_view) && (trigger.history.size == trigger.times)) {
+                                        trigger.solved = true
+                                    }
+
+                                    val eventHelper = MBAutomationEventsDBHelper(context)
+                                    eventHelper.addView(localTitle!!, null, false)
+
+                                    atLeastOneUpdate = true
+                                }
+                            }
+                        }
+                    }
+                }
+
+                helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
+            }
+
+            localTitle = null
+            startTime = -1L
+
+            if (atLeastOneUpdate) {
+                checkForTriggers(context)
+            }
         }
     }
 
     override fun onActivityPaused(activity: Activity) {}
     override fun onActivityDestroyed(activity: Activity) {
-        if (activity is FragmentActivity) {
-            if (curActivity != null) {
-                if (activity == curActivity) {
-                    curActivity = null
+        if (trackViewsAutomatically) {
+            if (activity is FragmentActivity) {
+                if (curActivity != null) {
+                    if (activity == curActivity) {
+                        curActivity = null
+                    }
                 }
             }
         }
@@ -221,11 +240,90 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
     override fun onActivityResumed(activity: Activity) {}
 
+    override fun onMBAudienceTagChanged(tag: String, value: String) {
+        val helper = MBAutomationDBHelper(context)
+        val automationMessages = helper.getMessages()
+        var atLeastOneUpdate = false
+        for (message in automationMessages) {
+            if (message.triggers != null) {
+                val triggers = message.triggers
+                for (trigger in triggers!!.triggers) {
+                    if (trigger is MBTriggerTagChange) {
+                        if (!trigger.semi_solved && !trigger.solved) {
+                            if (trigger.tag == tag) {
+                                when (trigger.operator) {
+                                    TagChangeOperator.EQUALS -> {
+                                        if (trigger.value == value) {
+                                            trigger.solved = true
+                                        }
+                                    }
+
+                                    TagChangeOperator.NOT_EQUAL -> {
+                                        if (trigger.value != value) {
+                                            trigger.solved = true
+                                        }
+                                    }
+                                }
+
+                                trigger.history.add(System.currentTimeMillis())
+                                atLeastOneUpdate = true
+                            }
+                        }
+                    }
+                }
+
+                helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
+            }
+        }
+
+        if (atLeastOneUpdate) {
+            checkForTriggers(context)
+        }
+    }
+
     companion object {
+        var mHandler: Handler? = null
+        var sendDataRunnable: Runnable? = null
+
         var curActivity: FragmentActivity? = null
 
+        //SECONDS VALUE
+        var eventsTimerTime = 10
+
+        //TRACK VIEWS AUTOMATICALLY
+        var trackViewsAutomatically = true
+
+        fun startEventsAndViewsAutomation(context: Context) {
+            mHandler = Handler()
+            sendDataRunnable = Runnable {
+                getEventsViewsAndSend(context)
+                mHandler?.postDelayed(sendDataRunnable, TimeUnit.SECONDS.toMillis(eventsTimerTime.toLong()))
+            }
+
+            sendDataRunnable?.run()
+        }
+
+        fun stopAutomation(context: Context) {
+            if(sendDataRunnable != null) {
+                mHandler?.removeCallbacks(sendDataRunnable!!)
+            }
+
+            val helper = MBAutomationEventsDBHelper(context)
+            val events: ArrayList<MBUserEvent> = helper.allEvents
+            if (events.isNotEmpty()) {
+                helper.setSendingEvents(events)
+                MBAsyncTask_sendEvents(context, events).execute()
+            }
+
+            val views: ArrayList<MBUserView> = helper.allViews
+            if (views.isNotEmpty()) {
+                helper.setSendingViews(views)
+                MBAsyncTask_sendViews(context, views).execute()
+            }
+        }
+
         /**TRIGGER - Add an event**/
-        fun addEvent(context: Context, event_name: String) {
+        fun sendEvent(context: Context, event_val: String, event_name: String? = null, metadata: String? = null) {
             val helper = MBAutomationDBHelper(context)
             val automationMessages = helper.getMessages()
             var atLeastOneUpdate = false
@@ -235,7 +333,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                     for (trigger in triggers!!.triggers) {
                         if (trigger is MBTriggerEvent) {
                             if (!trigger.semi_solved && !trigger.solved) {
-                                if (trigger.event_name == event_name) {
+                                if (trigger.event_val == event_val) {
                                     atLeastOneUpdate = true
                                     trigger.history.add(System.currentTimeMillis())
                                     if (trigger.history.size == trigger.times) {
@@ -250,6 +348,9 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                     helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
                 }
             }
+
+            val eventHelper = MBAutomationEventsDBHelper(context)
+            eventHelper.addEvent(event_val, event_name, metadata, false)
 
             if (atLeastOneUpdate) {
                 checkForTriggers(context)
@@ -318,34 +419,46 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                 }
             }
         }
-    }
 
-    override fun onMBAudienceTagChanged(tag: String, value: String) {
-        val helper = MBAutomationDBHelper(context)
-        val automationMessages = helper.getMessages()
-        var atLeastOneUpdate = false
-        for (message in automationMessages) {
-            if (message.triggers != null) {
-                val triggers = message.triggers
-                for (trigger in triggers!!.triggers) {
-                    if (trigger is MBTriggerTagChange) {
-                        if (!trigger.semi_solved && !trigger.solved) {
-                            if (trigger.tag == tag) {
-                                when (trigger.operator) {
-                                    TagChangeOperator.EQUALS -> {
-                                        if (trigger.value == value) {
-                                            trigger.solved = true
-                                        }
-                                    }
+        fun getEventsViewsAndSend(context: Context) {
+            val helper = MBAutomationEventsDBHelper(context)
+            val events: ArrayList<MBUserEvent> = helper.allEvents
+            if (events.isNotEmpty()) {
+                helper.setSendingEvents(events)
+                MBAsyncTask_sendEvents(context, events).execute()
+            }
 
-                                    TagChangeOperator.NOT_EQUAL -> {
-                                        if (trigger.value != value) {
-                                            trigger.solved = true
-                                        }
-                                    }
+            val views: ArrayList<MBUserView> = helper.allViews
+            if (views.isNotEmpty()) {
+                helper.setSendingViews(views)
+                MBAsyncTask_sendViews(context, views).execute()
+            }
+        }
+
+        fun trackScreenView(user_activity: FragmentActivity, metadata: String?, time: Long = -1L) {
+            val helper = MBAutomationDBHelper(user_activity.applicationContext)
+            val automationMessages = helper.getMessages()
+            var atLeastOneUpdate = false
+
+            for (message in automationMessages) {
+                if (message.triggers != null) {
+                    val triggers = message.triggers
+                    for (trigger in triggers!!.triggers) {
+                        if (trigger is MBTriggerView) {
+                            if (trigger.view_name == user_activity.title.toString()) {
+                                trigger.history.add(time)
+                                var totalTime = 0L
+                                for (h in trigger.history) {
+                                    totalTime += h
                                 }
 
-                                trigger.history.add(System.currentTimeMillis())
+                                if ((totalTime >= trigger.seconds_on_view) && (trigger.history.size == trigger.times)) {
+                                    trigger.solved = true
+                                }
+
+                                val eventHelper = MBAutomationEventsDBHelper(user_activity.applicationContext)
+                                eventHelper.addView(user_activity.title.toString(), metadata, false)
+
                                 atLeastOneUpdate = true
                             }
                         }
@@ -354,10 +467,10 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
 
                 helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
             }
-        }
 
-        if (atLeastOneUpdate) {
-            checkForTriggers(context)
+            if (atLeastOneUpdate) {
+                checkForTriggers(user_activity.applicationContext)
+            }
         }
     }
 }
