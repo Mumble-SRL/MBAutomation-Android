@@ -159,6 +159,7 @@ class MBAutomationParserConverter {
                     if (jTrigger != null) {
                         jTrigger.put("type", trigger.type)
                         jTrigger.put("solved", trigger.solved)
+                        jTrigger.put("id", trigger.id)
                         jTriggers.put(jTrigger)
                     }
                 }
@@ -377,7 +378,7 @@ class MBAutomationParserConverter {
                 }
 
                 if (MBCommonMethods.isJSONOk(jTr, "id")) {
-                    trigger.id = jTr.getLong("id")
+                    trigger.id = jTr.getString("id")
                 }
 
                 if (MBCommonMethods.isJSONOk(jTr, "solved")) {

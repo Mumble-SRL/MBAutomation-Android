@@ -18,6 +18,7 @@ import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAsyncTask_sendEve
 import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAsyncTask_sendViews
 import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAutomationDBHelper
 import mumble.mburger.mbautomation.MBAutomationHelpers_Tasks.MBAutomationEventsDBHelper
+import mumble.mburger.mbautomation.MBAutomationListeners.MBAutomationPluginInitialized
 import mumble.mburger.mbmessages.MBMessages
 import mumble.mburger.mbmessages.iam.MBIAMData.MBMessage
 import mumble.mburger.mbmessages.iam.MBMessagesManager
@@ -27,7 +28,7 @@ import mumble.mburger.sdk.kt.MBPlugins.MBPlugin
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.ActivityLifecycleCallbacks, MBPlugin() {
+class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.ActivityLifecycleCallbacks, MBPlugin {
 
     override var id: String? = "MBAutomation"
     override var order: Int = -1
@@ -35,7 +36,14 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
     override var error: String? = null
     override var initialized: Boolean = false
 
+    constructor(channel_id: String, notificationIcon: Int) : super() {
+        Companion.channel_id = channel_id
+        Companion.notificationIcon = notificationIcon
+    }
+
     private val PROPERTY_LATEST_IN = "latest_in"
+
+    var initListener: MBAutomationPluginInitialized? = null
 
     override fun init(context: Context) {
         super.init(context)
@@ -70,6 +78,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
             checkForTriggers(context)
         }
 
+        initListener?.onInitialized()
         startedCheckAndAdd()
         startEventsAndViewsAutomation(context)
     }
@@ -293,6 +302,9 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         //TRACK VIEWS AUTOMATICALLY
         var trackViewsAutomatically = true
 
+        lateinit var channel_id: String
+        var notificationIcon = -1
+
         fun startEventsAndViewsAutomation(context: Context) {
             mHandler = Handler()
             sendDataRunnable = Runnable {
@@ -304,7 +316,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
         }
 
         fun stopAutomation(context: Context) {
-            if(sendDataRunnable != null) {
+            if (sendDataRunnable != null) {
                 mHandler?.removeCallbacks(sendDataRunnable!!)
             }
 
@@ -408,6 +420,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                             if (MBAutomationCommon.isActivityAliveAndWell(curActivity)) {
                                 MBMessagesManager.startFlow(mess.message, curActivity!!)
                             }
+
                         }
                     } else {
                         if (nSolved == all_tr.size) {
@@ -435,7 +448,11 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
             }
         }
 
-        fun trackScreenView(user_activity: FragmentActivity, metadata: String?, time: Long = -1L) {
+        fun trackScreenView(user_activity: FragmentActivity, custom_name: String? = null,
+                            metadata : String ?, time: Long = -1L) {
+
+            val nameForTheScreen = custom_name ?: user_activity.title.toString()
+
             val helper = MBAutomationDBHelper(user_activity.applicationContext)
             val automationMessages = helper.getMessages()
             var atLeastOneUpdate = false
@@ -445,7 +462,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                     val triggers = message.triggers
                     for (trigger in triggers!!.triggers) {
                         if (trigger is MBTriggerView) {
-                            if (trigger.view_name == user_activity.title.toString()) {
+                            if (trigger.view_name == nameForTheScreen) {
                                 trigger.history.add(time)
                                 var totalTime = 0L
                                 for (h in trigger.history) {
@@ -457,7 +474,7 @@ class MBAutomation : MBAudienceTagChanged, MBAudienceLocationAdded, Application.
                                 }
 
                                 val eventHelper = MBAutomationEventsDBHelper(user_activity.applicationContext)
-                                eventHelper.addView(user_activity.title.toString(), metadata, false)
+                                eventHelper.addView(nameForTheScreen, metadata, false)
 
                                 atLeastOneUpdate = true
                             }
