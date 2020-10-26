@@ -3,6 +3,7 @@ package mumble.mburger.mbautomation.MBAutomationHelpers_Tasks
 import android.content.ContentValues
 import android.content.Context
 import android.os.AsyncTask
+import android.provider.Settings
 import mumble.mburger.mbautomation.MBAutomationComponents.MBAutomationAPIConstants
 import mumble.mburger.mbautomation.MBAutomationData.MBUserEvent
 import mumble.mburger.sdk.kt.Common.MBApiManager.MBAPIManager4
@@ -58,13 +59,13 @@ internal class MBAsyncTask_sendEvents(context: Context, var events: ArrayList<MB
     }
 
     fun putValuesAndCall() {
-        val values = ContentValues()
-        values.put("events", getJsonEvents())
-        map = MBAPIManager4.callApi(weakContext.get()!!, MBAutomationAPIConstants.API_SEND_EVENTS, values,
-                MBApiManagerConfig.MODE_POST, false, false)
+        map = MBAPIManager4.callApi(weakContext.get()!!, MBAutomationAPIConstants.API_SEND_EVENTS, ContentValues(),
+                MBApiManagerConfig.MODE_POST, false, false, dataString = getJsonEvents())
     }
 
     fun getJsonEvents(): String {
+        val jBuilder = StringBuilder("{")
+
         val jArr = JSONArray()
         for (ev in events) {
             val jEvent = JSONObject()
@@ -79,6 +80,11 @@ internal class MBAsyncTask_sendEvents(context: Context, var events: ArrayList<MB
             jArr.put(jEvent)
         }
 
-        return jArr.toString()
+        val device_id = Settings.Secure.getString(weakContext.get()!!.contentResolver, Settings.Secure.ANDROID_ID)
+        jBuilder.append("\"events\": $jArr,")
+        jBuilder.append("\"device_id\": \"$device_id\",")
+        jBuilder.append("\"os\": \"android\"")
+        jBuilder.append("}")
+        return jBuilder.toString()
     }
 }

@@ -118,7 +118,7 @@ class MBAutomationParserConverter {
                             val realTrigger = trigger as MBTriggerView
                             JSONObject().put("history", jsonizeHistory(realTrigger.history))
                                     .put("times", realTrigger.times)
-                                    .put("view_name", realTrigger.view_name)
+                                    .put("view", realTrigger.view_name)
                                     .put("seconds_on_view", realTrigger.seconds_on_view)
                         }
 
@@ -321,7 +321,7 @@ class MBAutomationParserConverter {
                     }
 
                     MBTriggersConstants.view -> {
-                        MBTriggerView(times = jTr.getInt("times"), view_name = jTr.getString("view_name"),
+                        MBTriggerView(times = jTr.getInt("times"), view_name = jTr.getString("view"),
                                 seconds_on_view = jTr.getInt("seconds_on_view"))
                     }
 
