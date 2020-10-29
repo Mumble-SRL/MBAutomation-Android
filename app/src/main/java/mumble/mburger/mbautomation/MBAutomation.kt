@@ -6,7 +6,6 @@ import android.content.Context
 import android.location.Location
 import android.os.Bundle
 import android.os.Handler
-import android.os.Looper
 import androidx.fragment.app.FragmentActivity
 import mumble.mburger.mbaudience.MBAudience
 import mumble.mburger.mbautomation.MBAutomationComponents.MBAutomationCommon
@@ -224,10 +223,6 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                 checkForTriggers(context)
             }
         }
-
-        if(curRunnable != null) {
-            Handler(Looper.getMainLooper()).removeCallbacks(curRunnable)
-        }
     }
 
     override fun onActivityPaused(activity: Activity) {}
@@ -242,8 +237,8 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
             }
         }
 
-        if(curRunnable != null) {
-            Handler(Looper.getMainLooper()).removeCallbacks(curRunnable)
+        if (curRunnable != null) {
+            mHandlerTrackViews?.removeCallbacks(curRunnable)
         }
     }
 
@@ -297,6 +292,8 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
 
     companion object {
         var mHandler: Handler? = null
+        var mHandlerTrackViews: Handler? = null
+
         var sendDataRunnable: Runnable? = null
 
         var curActivity: FragmentActivity? = null
@@ -314,6 +311,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
 
         fun startEventsAndViewsAutomation(context: Context) {
             mHandler = Handler()
+            mHandlerTrackViews = Handler()
             sendDataRunnable = Runnable {
                 getEventsViewsAndSend(context)
                 mHandler?.postDelayed(sendDataRunnable, TimeUnit.SECONDS.toMillis(eventsTimerTime.toLong()))
@@ -480,6 +478,10 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                         if (trigger is MBTriggerView) {
                             if (trigger.view_name == nameForTheScreen) {
 
+                                if (curRunnable != null) {
+                                    mHandlerTrackViews?.removeCallbacks(curRunnable)
+                                }
+
                                 curRunnable = Runnable {
                                     if (MBAutomationCommon.isActivityAliveAndWell(curActivity)) {
                                         trigger.history.add(trigger.seconds_on_view.toLong())
@@ -495,7 +497,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                                     }
                                 }
 
-                                Handler(Looper.getMainLooper()).postDelayed(curRunnable, TimeUnit.SECONDS.toMillis(trigger.seconds_on_view.toLong()))
+                                mHandlerTrackViews?.postDelayed(curRunnable, TimeUnit.SECONDS.toMillis(trigger.seconds_on_view.toLong()))
                             }
                         }
                     }
