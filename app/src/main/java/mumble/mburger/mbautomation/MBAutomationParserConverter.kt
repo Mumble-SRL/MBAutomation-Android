@@ -343,16 +343,21 @@ class MBAutomationParserConverter {
                         }
 
                         if (MBCommonMethods.isJSONOk(jTr, "metadata")) {
-                            val jMtD = jTr.getJSONObject("metadata")
-                            val keys = jMtD.keys()
+                            try {
+                                if(jTr.get("metadata") is JSONObject) {
+                                    val jMtD = jTr.getJSONObject("metadata")
+                                    val keys = jMtD.keys()
 
-                            while (keys.hasNext()) {
-                                val key: String = keys.next()
-                                try {
-                                    val value: String = jMtD.getString(key)
-                                    metadata = MBEventMetadata(key, value)
-                                } catch (e: JSONException) {
+                                    while (keys.hasNext()) {
+                                        val key: String = keys.next()
+                                        try {
+                                            val value: String = jMtD.getString(key)
+                                            metadata = MBEventMetadata(key, value)
+                                        } catch (e: JSONException) {
+                                        }
+                                    }
                                 }
+                            } catch (e: JSONException) {
                             }
                         }
 
