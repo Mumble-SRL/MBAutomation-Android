@@ -118,7 +118,7 @@ class MBAutomationParserConverter {
                             val realTrigger = trigger as MBTriggerView
                             JSONObject().put("history", jsonizeHistory(realTrigger.history))
                                     .put("times", realTrigger.times)
-                                    .put("view_name", realTrigger.view_name)
+                                    .put("view", realTrigger.view_name)
                                     .put("seconds_on_view", realTrigger.seconds_on_view)
                         }
 
@@ -139,7 +139,7 @@ class MBAutomationParserConverter {
 
                             JSONObject().put("history", jsonizeHistory(realTrigger.history))
                                     .put("times", realTrigger.times)
-                                    .put("event_name", realTrigger.event_val)
+                                    .put("event", realTrigger.event_val)
                                     .put("metadata", jMetadata)
                         }
 
@@ -159,6 +159,7 @@ class MBAutomationParserConverter {
                     if (jTrigger != null) {
                         jTrigger.put("type", trigger.type)
                         jTrigger.put("solved", trigger.solved)
+                        jTrigger.put("id", trigger.id)
                         jTriggers.put(jTrigger)
                     }
                 }
@@ -320,7 +321,7 @@ class MBAutomationParserConverter {
                     }
 
                     MBTriggersConstants.view -> {
-                        MBTriggerView(times = jTr.getInt("times"), view_name = jTr.getString("view_name"),
+                        MBTriggerView(times = jTr.getInt("times"), view_name = jTr.getString("view"),
                                 seconds_on_view = jTr.getInt("seconds_on_view"))
                     }
 
@@ -337,21 +338,26 @@ class MBAutomationParserConverter {
                             times = jTr.getInt("times")
                         }
 
-                        if (MBCommonMethods.isJSONOk(jTr, "event_name")) {
-                            event_val = jTr.getString("event_name")
+                        if (MBCommonMethods.isJSONOk(jTr, "event")) {
+                            event_val = jTr.getString("event")
                         }
 
                         if (MBCommonMethods.isJSONOk(jTr, "metadata")) {
-                            val jMtD = jTr.getJSONObject("metadata")
-                            val keys = jMtD.keys()
+                            try {
+                                if(jTr.get("metadata") is JSONObject) {
+                                    val jMtD = jTr.getJSONObject("metadata")
+                                    val keys = jMtD.keys()
 
-                            while (keys.hasNext()) {
-                                val key: String = keys.next()
-                                try {
-                                    val value: String = jMtD.getString(key)
-                                    metadata = MBEventMetadata(key, value)
-                                } catch (e: JSONException) {
+                                    while (keys.hasNext()) {
+                                        val key: String = keys.next()
+                                        try {
+                                            val value: String = jMtD.getString(key)
+                                            metadata = MBEventMetadata(key, value)
+                                        } catch (e: JSONException) {
+                                        }
+                                    }
                                 }
+                            } catch (e: JSONException) {
                             }
                         }
 
@@ -377,7 +383,7 @@ class MBAutomationParserConverter {
                 }
 
                 if (MBCommonMethods.isJSONOk(jTr, "id")) {
-                    trigger.id = jTr.getLong("id")
+                    trigger.id = jTr.getString("id")
                 }
 
                 if (MBCommonMethods.isJSONOk(jTr, "solved")) {
