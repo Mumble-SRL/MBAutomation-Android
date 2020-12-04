@@ -139,7 +139,7 @@ class MBAutomationParserConverter {
 
                             JSONObject().put("history", jsonizeHistory(realTrigger.history))
                                     .put("times", realTrigger.times)
-                                    .put("event_name", realTrigger.event_val)
+                                    .put("event", realTrigger.event_val)
                                     .put("metadata", jMetadata)
                         }
 
@@ -338,8 +338,8 @@ class MBAutomationParserConverter {
                             times = jTr.getInt("times")
                         }
 
-                        if (MBCommonMethods.isJSONOk(jTr, "event_name")) {
-                            event_val = jTr.getString("event_name")
+                        if (MBCommonMethods.isJSONOk(jTr, "event")) {
+                            event_val = jTr.getString("event")
                         }
 
                         if (MBCommonMethods.isJSONOk(jTr, "metadata")) {
