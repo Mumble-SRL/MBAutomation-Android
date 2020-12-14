@@ -321,8 +321,11 @@ class MBAutomationParserConverter {
                     }
 
                     MBTriggersConstants.view -> {
-                        MBTriggerView(times = jTr.getInt("times"), view_name = jTr.getString("view"),
-                                seconds_on_view = jTr.getInt("seconds_on_view"))
+                        MBTriggerView(
+                                times = if (jTr.get("times") is Int) jTr.getInt("times") else 0,
+                                view_name = jTr.getString("view"),
+                                seconds_on_view = if (jTr.get("seconds_on_view") is Int) jTr.getInt("seconds_on_view") else 0
+                        )
                     }
 
                     MBTriggersConstants.inactive_user -> {
@@ -344,7 +347,7 @@ class MBAutomationParserConverter {
 
                         if (MBCommonMethods.isJSONOk(jTr, "metadata")) {
                             try {
-                                if(jTr.get("metadata") is JSONObject) {
+                                if (jTr.get("metadata") is JSONObject) {
                                     val jMtD = jTr.getJSONObject("metadata")
                                     val keys = jMtD.keys()
 

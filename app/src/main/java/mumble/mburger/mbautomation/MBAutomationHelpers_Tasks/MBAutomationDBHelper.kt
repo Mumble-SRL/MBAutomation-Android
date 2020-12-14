@@ -117,7 +117,6 @@ class MBAutomationDBHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
         }
 
         cursor.close()
-        db.close()
         return message
     }
 
