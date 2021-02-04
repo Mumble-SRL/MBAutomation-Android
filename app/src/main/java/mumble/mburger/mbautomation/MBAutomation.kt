@@ -106,7 +106,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                     if (trigger is MBTriggerAppOpening) {
                         atLeastOneUpdate = true
                         trigger.history.add(System.currentTimeMillis())
-                        if (trigger.history.size == trigger.times) {
+                        if (trigger.history.size >= trigger.times) {
                             trigger.solved = true
                         }
                     }
@@ -123,18 +123,6 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                                     trigger.history.add(System.currentTimeMillis())
                                     trigger.solved = true
                                 }
-                            }
-                        }
-                    }
-
-                    if (trigger is MBTriggerLocation) {
-                        if (trigger.semi_solved) {
-                            val enter_time = trigger.history[0]
-                            val diff = System.currentTimeMillis() - enter_time
-                            val diffDays = TimeUnit.MILLISECONDS.toDays(diff)
-                            if (trigger.after >= diffDays) {
-                                atLeastOneUpdate = true
-                                trigger.solved = true
                             }
                         }
                     }
@@ -339,6 +327,54 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
             }
         }
 
+        /**TRIGGER ScreenView**/
+        fun trackScreenView(user_activity: FragmentActivity, custom_name: String? = null, metadata: String?) {
+            val nameForTheScreen = custom_name ?: user_activity.title.toString()
+
+            val helper = MBAutomationDBHelper(user_activity.applicationContext)
+            val automationMessages = helper.getMessages()
+            var atLeastOneUpdate = false
+
+            for (message in automationMessages) {
+                if (message.triggers != null) {
+                    val triggers = message.triggers
+                    for (trigger in triggers!!.triggers) {
+                        if (trigger is MBTriggerView) {
+                            if (trigger.view_name == nameForTheScreen) {
+
+                                if (curRunnable != null) {
+                                    mHandlerTrackViews?.removeCallbacks(curRunnable)
+                                }
+
+                                curRunnable = Runnable {
+                                    if (MBAutomationCommon.isActivityAliveAndWell(curActivity)) {
+                                        trigger.history.add(trigger.seconds_on_view.toLong())
+                                        if (trigger.history.size >= trigger.times) {
+                                            trigger.solved = true
+                                        }
+
+                                        val eventHelper = MBAutomationEventsDBHelper(user_activity.applicationContext)
+                                        eventHelper.addView(nameForTheScreen, metadata, false)
+
+                                        helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
+                                        checkForTriggers(user_activity.applicationContext)
+                                    }
+                                }
+
+                                mHandlerTrackViews?.postDelayed(curRunnable, TimeUnit.SECONDS.toMillis(trigger.seconds_on_view.toLong()))
+                            }
+                        }
+                    }
+                }
+
+                helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
+            }
+
+            if (atLeastOneUpdate) {
+                checkForTriggers(user_activity.applicationContext)
+            }
+        }
+
         /**TRIGGER - Add an event**/
         fun sendEvent(context: Context, event_val: String, event_name: String? = null, metadata: String? = null) {
             val helper = MBAutomationDBHelper(context)
@@ -384,14 +420,14 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                     val triggers = message.triggers
                     for (trigger in triggers!!.triggers) {
                         if (trigger is MBTriggerLocation) {
-                            if (!trigger.semi_solved && !trigger.solved) {
+                            if (!trigger.solved) {
                                 val results = FloatArray(1)
                                 Location.distanceBetween(trigger.latitude, trigger.longitude,
                                         latitude, longitude, results)
 
                                 if (results[0] < trigger.radius) {
                                     trigger.history.add(System.currentTimeMillis())
-                                    trigger.semi_solved = true
+                                    trigger.solved = true
                                 }
                             }
                         }
@@ -461,53 +497,6 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
             if (views.isNotEmpty()) {
                 helper.setSendingViews(views)
                 MBAsyncTask_sendViews(context, views).execute()
-            }
-        }
-
-        fun trackScreenView(user_activity: FragmentActivity, custom_name: String? = null, metadata: String?) {
-            val nameForTheScreen = custom_name ?: user_activity.title.toString()
-
-            val helper = MBAutomationDBHelper(user_activity.applicationContext)
-            val automationMessages = helper.getMessages()
-            var atLeastOneUpdate = false
-
-            for (message in automationMessages) {
-                if (message.triggers != null) {
-                    val triggers = message.triggers
-                    for (trigger in triggers!!.triggers) {
-                        if (trigger is MBTriggerView) {
-                            if (trigger.view_name == nameForTheScreen) {
-
-                                if (curRunnable != null) {
-                                    mHandlerTrackViews?.removeCallbacks(curRunnable)
-                                }
-
-                                curRunnable = Runnable {
-                                    if (MBAutomationCommon.isActivityAliveAndWell(curActivity)) {
-                                        trigger.history.add(trigger.seconds_on_view.toLong())
-                                        if (trigger.history.size == trigger.times) {
-                                            trigger.solved = true
-                                        }
-
-                                        val eventHelper = MBAutomationEventsDBHelper(user_activity.applicationContext)
-                                        eventHelper.addView(nameForTheScreen, metadata, false)
-
-                                        helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
-                                        checkForTriggers(user_activity.applicationContext)
-                                    }
-                                }
-
-                                mHandlerTrackViews?.postDelayed(curRunnable, TimeUnit.SECONDS.toMillis(trigger.seconds_on_view.toLong()))
-                            }
-                        }
-                    }
-                }
-
-                helper.updateMessage(message.id, MBAutomationParserConverter.convertMessageToJSON(message))
-            }
-
-            if (atLeastOneUpdate) {
-                checkForTriggers(user_activity.applicationContext)
             }
         }
 
