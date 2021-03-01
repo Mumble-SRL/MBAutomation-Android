@@ -243,8 +243,8 @@ class MBAutomationParserConverter {
                 val text = MBCommonMethods.getJSONField(jContent, "text") as String
                 val text_color = MBCommonMethods.getJSONField(jContent, "text_color") as Int?
                 val background_color = MBCommonMethods.getJSONField(jContent, "background_color") as Int?
-                val action_type = MBCommonMethods.getJSONField(jContent, "action_type") as String
-                val action = MBCommonMethods.getJSONField(jContent, "action") as String
+                val action_type = MBCommonMethods.getJSONField(jContent, "action_type") as String?
+                val action = MBCommonMethods.getJSONField(jContent, "action") as String?
                 return CTA(text, text_color, background_color, action_type, action)
             }
 
@@ -321,10 +321,30 @@ class MBAutomationParserConverter {
                     }
 
                     MBTriggersConstants.view -> {
+                        val tTimes = if (jTr.get("times") is Int) {
+                            jTr.getInt("times")
+                        } else {
+                            if (jTr.getString("times").toIntOrNull() == null) {
+                                0
+                            } else {
+                                jTr.getString("times").toInt()
+                            }
+                        }
+
+                        val tSeconds = if (jTr.get("seconds_on_view") is Int) {
+                            jTr.getInt("seconds_on_view")
+                        } else {
+                            if (jTr.getString("seconds_on_view").toIntOrNull() == null) {
+                                0
+                            } else {
+                                jTr.getString("seconds_on_view").toInt()
+                            }
+                        }
+
                         MBTriggerView(
-                                times = if (jTr.get("times") is Int) jTr.getInt("times") else 0,
-                                view_name = jTr.getString("view"),
-                                seconds_on_view = if (jTr.get("seconds_on_view") is Int) jTr.getInt("seconds_on_view") else 0
+                                times = tTimes,
+                                view_name = jTr.getString ("view"),
+                                seconds_on_view = tSeconds
                         )
                     }
 
@@ -338,7 +358,15 @@ class MBAutomationParserConverter {
                         var metadata: MBEventMetadata? = null
 
                         if (MBCommonMethods.isJSONOk(jTr, "times")) {
-                            times = jTr.getInt("times")
+                            times = if (jTr.get("times") is Int) {
+                                jTr.getInt("times")
+                            } else {
+                                if (jTr.getString("times").toIntOrNull() == null) {
+                                    0
+                                } else {
+                                    jTr.getString("times").toInt()
+                                }
+                            }
                         }
 
                         if (MBCommonMethods.isJSONOk(jTr, "event")) {

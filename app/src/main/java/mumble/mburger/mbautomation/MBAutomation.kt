@@ -108,6 +108,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                         trigger.history.add(System.currentTimeMillis())
                         if (trigger.history.size >= trigger.times) {
                             trigger.solved = true
+                            messagesEdited.add(message.id)
                         }
                     }
 
@@ -122,6 +123,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                                     atLeastOneUpdate = true
                                     trigger.history.add(System.currentTimeMillis())
                                     trigger.solved = true
+                                    messagesEdited.add(message.id)
                                 }
                             }
                         }
@@ -158,6 +160,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                             if (trigger.view_name == activity.title) {
                                 localTitle = activity.title.toString()
                                 startTime = System.currentTimeMillis()
+                                messagesEdited.add(message.id)
                             }
                         }
                     }
@@ -193,6 +196,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
 
                                     val eventHelper = MBAutomationEventsDBHelper(context)
                                     eventHelper.addView(localTitle!!, null, false)
+                                    messagesEdited.add(message.id)
 
                                     atLeastOneUpdate = true
                                 }
@@ -247,12 +251,14 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                                 when (trigger.operator) {
                                     TagChangeOperator.EQUALS -> {
                                         if (trigger.value == value) {
+                                            messagesEdited.add(message.id)
                                             trigger.solved = true
                                         }
                                     }
 
                                     TagChangeOperator.NOT_EQUAL -> {
                                         if (trigger.value != value) {
+                                            messagesEdited.add(message.id)
                                             trigger.solved = true
                                         }
                                     }
@@ -296,6 +302,8 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
         var notificationIcon = -1
 
         var curRunnable: Runnable? = null
+
+        var messagesEdited = ArrayList<Long>()
 
         fun startEventsAndViewsAutomation(context: Context) {
             mHandler = Handler()
@@ -350,6 +358,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                                     if (MBAutomationCommon.isActivityAliveAndWell(curActivity)) {
                                         trigger.history.add(trigger.seconds_on_view.toLong())
                                         if (trigger.history.size >= trigger.times) {
+                                            messagesEdited.add(message.id)
                                             trigger.solved = true
                                         }
 
@@ -390,6 +399,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                                     atLeastOneUpdate = true
                                     trigger.history.add(System.currentTimeMillis())
                                     if (trigger.history.size == trigger.times) {
+                                        messagesEdited.add(message.id)
                                         trigger.solved = true
                                     }
                                     break
@@ -427,6 +437,7 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
 
                                 if (results[0] < trigger.radius) {
                                     trigger.history.add(System.currentTimeMillis())
+                                    messagesEdited.add(message.id)
                                     trigger.solved = true
                                 }
                             }
@@ -444,7 +455,14 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
 
         private fun checkForTriggers(context: Context) {
             val helper = MBAutomationDBHelper(context)
-            val automationMessages = helper.getMessages()
+            val automationMessages = ArrayList<MBMessageWithTriggers>()
+            for(edited in messagesEdited){
+                val m = helper.getAMessage(edited)
+                if(m != null) {
+                    automationMessages.add(m);
+                }
+            }
+
             for (mess in automationMessages) {
                 val triggers = mess.triggers
                 if (triggers != null) {
@@ -483,6 +501,8 @@ class MBAutomation : Application.ActivityLifecycleCallbacks, MBPlugin {
                     }
                 }
             }
+
+            messagesEdited.clear()
         }
 
         fun getEventsViewsAndSend(context: Context) {
