@@ -10,6 +10,7 @@ import mumble.mburger.mbautomation.MBAutomationData.MBMessageWithTriggers
 import mumble.mburger.mbautomation.MBAutomationParserConverter
 import mumble.mburger.mbmessages.triggers.MBMessageTriggers
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 val DATABASE_VERSION = 1
 val DATABASE_NAME = "iam.db"
@@ -102,6 +103,18 @@ class MBAutomationDBHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
 
         cursor.close()
         db.close()
+        val campaignsNotToSend = ArrayList<MBMessageWithTriggers>()
+        for (c in campaigns){
+            if(System.currentTimeMillis() > TimeUnit.SECONDS.toMillis(c.message.ends_at)){
+                campaignsNotToSend.add(c)
+            }
+        }
+
+        for (c in campaignsNotToSend){
+            campaigns.remove(c)
+        }
+
+
         return campaigns
     }
 
@@ -117,6 +130,13 @@ class MBAutomationDBHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
         }
 
         cursor.close()
+
+        if(message != null) {
+            if (System.currentTimeMillis() > TimeUnit.SECONDS.toMillis(message.message.ends_at)) {
+                return null
+            }
+        }
+
         return message
     }
 
